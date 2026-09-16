@@ -68,8 +68,9 @@ export class EscPosFormatter {
       const eanData = clean.slice(0, 12);
       this.addString(GS + 'k' + String.fromCharCode(67) + String.fromCharCode(eanData.length) + eanData);
     } else {
-      // ESC/POS CODE128 (Function B: m=73, with {B prefix for code set B)
-      const dataWithSet = '{B' + clean;
+      // ESC/POS CODE128 (Function B: m=73)
+      // Standard ESC/POS specification requires starting with a code set selection character ({A, {B, or {C)
+      const dataWithSet = clean.startsWith('{') ? clean : `{B${clean}`;
       this.addString(GS + 'k' + String.fromCharCode(73) + String.fromCharCode(dataWithSet.length) + dataWithSet);
     }
     this.addLine();

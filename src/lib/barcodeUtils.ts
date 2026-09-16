@@ -121,26 +121,108 @@ export function getProductBarcode(product: Product): string {
 
 
 /**
+ * Sanitizes and normalizes barcode strings received from physical USB/Bluetooth
+ * scanners, camera decoders (Html5Qrcode/ZXing), and keyboard wedge inputs.
+ *
+ * Removes:
+ * 1. ISO/IEC 15424 AIM Symbology Identifiers:
+ *    `]C1` (Code 128 / GS1-128)
+ *    `]C0`, `]C2`, `]C4` (Code 128)
+ *    `]E0`, `]E1`, `]E2`, `]E3`, `]E4`, `]e0` (EAN-13, EAN-8, UPC-A, UPC-E)
+ *    `]A0`, `]A1` (Code 39)
+ *    `]I0` (Interleaved 2 of 5)
+ *    `]d1`, `]Q1` (Data Matrix, QR Code)
+ * 2. ESC/POS Code-Set selectors from thermal prints:
+ *    `{B`, `{A`, `{C`, `{1`
+ * 3. Surrounding framing brackets/braces/quotes:
+ *    `{...}`, `[...]`, `(...)`, `"..."`, `'...'`
+ * 4. Single-letter hardware scanner prefixes (e.g. `B616110002044` -> `616110002044`)
+ * 5. Non-printable ASCII control characters.
+ */
+export function cleanScannedBarcode(raw: string): string {
+  if (!raw) return '';
+  let s = raw.trim();
+
+  // Strip non-printable ASCII control characters (\x00-\x1F, \x7F-\x9F)
+  s = s.replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim();
+
+  // Strip ISO/IEC 15424 AIM Symbology Identifiers:
+  // Starts with ']' followed by a letter and optional digit/letter (e.g. ]C1, ]C0, ]E0, ]A0, ]d1, ]Q1)
+  s = s.replace(/^\][a-zA-Z][0-9a-zA-Z]?/g, '').trim();
+
+  // Strip ESC/POS thermal printer code set prefix if printed literally (e.g. {B, {A, {C)
+  s = s.replace(/^\{[a-zA-Z]/g, '').trim();
+
+  // Strip surrounding braces, brackets, quotes, and parentheses
+  s = s.replace(/^[{[("'<]+|[}\])"'>]+$/g, '').trim();
+
+  // Handle any remaining framing characters
+  s = s.replace(/^[{[\]}]+|[\]}[{]+$/g, '').trim();
+
+  // If scanner prepended a single prefix letter like 'B' or 'C' before 8-14 numeric digits (e.g. B616110002044)
+  if (/^[a-zA-Z]\d{8,14}$/.test(s)) {
+    s = s.slice(1);
+  }
+
+  return s.trim();
+}
+
+/**
+ * Generates an array of normalized search candidates for barcode lookup in inventory.
+ */
+export function getBarcodeLookupCandidates(rawQuery: string): string[] {
+  if (!rawQuery) return [];
+  const raw = rawQuery.trim();
+  if (!raw) return [];
+
+  const candidates = new Set<string>();
+
+  // 1. Primary: Thoroughly cleaned barcode
+  const clean = cleanScannedBarcode(raw);
+  if (clean) {
+    candidates.add(clean.toLowerCase());
+  }
+
+  // 2. Raw query (case-insensitive)
+  candidates.add(raw.toLowerCase());
+
+  // 3. If query contains ]C1 or {B, explicitly add the substring after it
+  const matchAim = raw.match(/^\][a-zA-Z][0-9a-zA-Z]?(.*)$/);
+  if (matchAim && matchAim[1]) {
+    candidates.add(matchAim[1].trim().toLowerCase());
+  }
+  const matchEscPos = raw.match(/^\{[a-zA-Z0-9](.*)$/);
+  if (matchEscPos && matchEscPos[1]) {
+    candidates.add(matchEscPos[1].trim().toLowerCase());
+  }
+
+  // 4. UPC-A / EAN-13 padding conversions (12 vs 13 digits)
+  if (/^\d{12}$/.test(clean)) {
+    // 12-digit code: also test with leading '0' as 13-digit EAN-13
+    candidates.add('0' + clean);
+  } else if (/^0\d{12}$/.test(clean)) {
+    // 13-digit code starting with 0: also test without leading '0' as 12-digit UPC-A
+    candidates.add(clean.slice(1));
+  }
+
+  return Array.from(candidates).filter(c => c.length > 0);
+}
+
+/**
  * Searches a tenant's product list for an exact match on barcode or fallback product ID.
  * Strict multi-tenant isolation: only checks the provided tenant products array.
  */
 export function findProductByBarcode(products: Product[], rawQuery: string): Product | null {
   if (!rawQuery) return null;
-  const cleanQuery = rawQuery.trim().toLowerCase();
-  if (!cleanQuery) return null;
+  const candidates = getBarcodeLookupCandidates(rawQuery);
+  if (candidates.length === 0) return null;
 
-  // Normalize query by removing surrounding curly brackets or formatting characters if scanner added them
-  const normalizedQuery = cleanQuery.replace(/^[{[(]+|[\])}+]$/g, '').trim();
-
-  // Try matching with normalized query as well as raw clean query
-  const queriesToTest = Array.from(new Set([cleanQuery, normalizedQuery]));
-
-  for (const q of queriesToTest) {
-    // 1. Primary: exact match on barcode field
+  for (const q of candidates) {
+    // 1. Primary: match on barcode field
     const byBarcode = products.find(p => p.barcode && p.barcode.trim().toLowerCase() === q);
     if (byBarcode) return byBarcode;
 
-    // 2. Secondary fallback: exact match on product ID (allows scanning internal product ID labels)
+    // 2. Secondary fallback: match on product ID (allows scanning internal product ID labels)
     const byId = products.find(p => p.id.trim().toLowerCase() === q);
     if (byId) return byId;
   }
@@ -153,10 +235,11 @@ export function findProductByBarcode(products: Product[], rawQuery: string): Pro
  */
 export function isBarcodeDuplicate(products: Product[], barcode: string, excludeProductId?: string): boolean {
   if (!barcode) return false;
-  const clean = barcode.trim().toLowerCase();
+  const clean = (cleanScannedBarcode(barcode) || barcode.trim()).toLowerCase();
   return products.some(p => {
     if (excludeProductId && p.id === excludeProductId) return false;
-    return p.barcode && p.barcode.trim().toLowerCase() === clean;
+    const pClean = p.barcode ? (cleanScannedBarcode(p.barcode) || p.barcode.trim()).toLowerCase() : '';
+    return pClean === clean;
   });
 }
 

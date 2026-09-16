@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Product, BusinessConfig, Category } from '../../types';
 import { formatCurrency } from '../../lib/utils';
-import { generateBarcodeSvgXml, getProductBarcode } from '../../lib/barcodeUtils';
+import { generateBarcodeSvgXml, getProductBarcode, cleanScannedBarcode } from '../../lib/barcodeUtils';
 import { thermalPrinterService } from '../../printer/ThermalPrinterService';
 import {
   Printer,
@@ -118,13 +118,14 @@ export function BulkBarcodePrintModal({
   // Filter products based on search & category
   const filteredProducts = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
+    const cleanQ = cleanScannedBarcode(searchQuery).toLowerCase();
     return products.filter((p) => {
       const matchCat = selectedCategory === 'all' || p.categoryId === selectedCategory;
       const matchSearch =
         !q ||
         p.name.toLowerCase().includes(q) ||
         (p.genericName && p.genericName.toLowerCase().includes(q)) ||
-        (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+        (p.barcode && (p.barcode.toLowerCase().includes(q) || (cleanQ && p.barcode.toLowerCase().includes(cleanQ)))) ||
         (p.categoryName && p.categoryName.toLowerCase().includes(q));
       return matchCat && matchSearch;
     });

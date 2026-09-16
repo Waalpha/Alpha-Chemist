@@ -4,7 +4,7 @@ import { db, DEFAULT_BUSINESS_ID } from '../../lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { formatCurrency, logAuditAction } from '../../lib/utils';
 import { Package, Plus, Search, Edit2, Trash2, X, AlertCircle, Download, Upload, Layers, CheckCircle2, Barcode, Sparkles, Printer, Maximize2, Copy, Check, Tag } from 'lucide-react';
-import { generateBarcode, isBarcodeDuplicate, detectBarcodeFormat } from '../../lib/barcodeUtils';
+import { generateBarcode, isBarcodeDuplicate, detectBarcodeFormat, cleanScannedBarcode } from '../../lib/barcodeUtils';
 import { BarcodeDisplay } from '../common/BarcodeDisplay';
 import { BarcodeLabelPrintModal } from '../common/BarcodeLabelPrintModal';
 import { BulkBarcodePrintModal } from '../common/BulkBarcodePrintModal';
@@ -578,11 +578,13 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
 
   const filteredProducts = products.filter(p => {
     const matchesCat = selectedCategory === 'all' || p.categoryId === selectedCategory;
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = p.name.toLowerCase().includes(query) ||
+    const query = searchQuery.toLowerCase().trim();
+    const cleanQ = cleanScannedBarcode(searchQuery).toLowerCase();
+    const matchesSearch = !query ||
+                          p.name.toLowerCase().includes(query) ||
                           p.categoryName.toLowerCase().includes(query) ||
                           (p.genericName && p.genericName.toLowerCase().includes(query)) ||
-                          (p.barcode && p.barcode.toLowerCase().includes(query));
+                          (p.barcode && (p.barcode.toLowerCase().includes(query) || (cleanQ && p.barcode.toLowerCase().includes(cleanQ))));
     return matchesCat && matchesSearch;
   });
 
@@ -1121,7 +1123,11 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
                   <input
                     type="text"
                     value={formData.barcode}
-                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value.trim() })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const cleaned = cleanScannedBarcode(val);
+                      setFormData({ ...formData, barcode: cleaned || val.trim() });
+                    }}
                     placeholder="Scan with barcode scanner or enter code..."
                     className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 font-mono text-base font-extrabold text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 tracking-wider"
                   />

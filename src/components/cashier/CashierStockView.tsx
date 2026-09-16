@@ -4,6 +4,7 @@ import { db, DEFAULT_BUSINESS_ID } from '../../lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { Package, Search, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { getLocalCachedProducts, cacheLocalProducts } from '../../lib/offlineManager';
+import { cleanScannedBarcode } from '../../lib/barcodeUtils';
 
 interface CashierStockViewProps {
   user: UserProfile;
@@ -91,9 +92,14 @@ export function CashierStockView({ user, businessConfig }: CashierStockViewProps
     }
   }
 
+  const query = searchQuery.toLowerCase().trim();
+  const cleanQ = cleanScannedBarcode(searchQuery).toLowerCase();
   const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.categoryName.toLowerCase().includes(searchQuery.toLowerCase())
+    !query ||
+    p.name.toLowerCase().includes(query) ||
+    p.categoryName.toLowerCase().includes(query) ||
+    (p.genericName && p.genericName.toLowerCase().includes(query)) ||
+    (p.barcode && (p.barcode.toLowerCase().includes(query) || (cleanQ && p.barcode.toLowerCase().includes(cleanQ))))
   );
 
   return (

@@ -28,6 +28,7 @@ import { CameraBarcodeScannerModal } from '../common/CameraBarcodeScannerModal';
 import { UnknownBarcodeModal } from '../common/UnknownBarcodeModal';
 import {
   findProductByBarcode,
+  cleanScannedBarcode,
   playScanSuccessSound,
   playScanErrorSound
 } from '../../lib/barcodeUtils';
@@ -292,11 +293,11 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
   };
 
   const handleBarcodeScanned = (rawCode: string) => {
-    const cleanCode = rawCode.trim();
-    if (!cleanCode) return;
+    if (!rawCode || !rawCode.trim()) return;
+    const sanitized = cleanScannedBarcode(rawCode) || rawCode.trim();
 
     // Search products in current business/tenant
-    const matchedProduct = findProductByBarcode(products, cleanCode);
+    const matchedProduct = findProductByBarcode(products, rawCode);
 
     if (matchedProduct) {
       if (matchedProduct.status === 'inactive') {
@@ -330,7 +331,7 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
       }, 50);
     } else {
       playScanErrorSound();
-      setUnknownBarcode(cleanCode);
+      setUnknownBarcode(sanitized);
       setShowUnknownModal(true);
       setBarcodeQuery('');
     }
@@ -617,12 +618,14 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
 
   const filteredProducts = products.filter(p => {
     const matchesCat = selectedCategory === 'all' || p.categoryId === selectedCategory;
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = p.name.toLowerCase().includes(query) ||
+    const query = searchQuery.toLowerCase().trim();
+    const cleanQ = cleanScannedBarcode(searchQuery).toLowerCase();
+    const matchesSearch = !query ||
+                          p.name.toLowerCase().includes(query) ||
                           p.categoryName.toLowerCase().includes(query) ||
                           (p.genericName && p.genericName.toLowerCase().includes(query)) ||
                           (p.dosage && p.dosage.toLowerCase().includes(query)) ||
-                          (p.barcode && p.barcode.toLowerCase().includes(query));
+                          (p.barcode && (p.barcode.toLowerCase().includes(query) || (cleanQ && p.barcode.toLowerCase().includes(cleanQ))));
     return matchesCat && matchesSearch;
   });
 
