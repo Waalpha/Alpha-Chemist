@@ -129,13 +129,21 @@ export function findProductByBarcode(products: Product[], rawQuery: string): Pro
   const cleanQuery = rawQuery.trim().toLowerCase();
   if (!cleanQuery) return null;
 
-  // 1. Primary: exact match on barcode field
-  const byBarcode = products.find(p => p.barcode && p.barcode.trim().toLowerCase() === cleanQuery);
-  if (byBarcode) return byBarcode;
+  // Normalize query by removing surrounding curly brackets or formatting characters if scanner added them
+  const normalizedQuery = cleanQuery.replace(/^[{[(]+|[\])}+]$/g, '').trim();
 
-  // 2. Secondary fallback: exact match on product ID (allows scanning internal product ID labels)
-  const byId = products.find(p => p.id.trim().toLowerCase() === cleanQuery);
-  if (byId) return byId;
+  // Try matching with normalized query as well as raw clean query
+  const queriesToTest = Array.from(new Set([cleanQuery, normalizedQuery]));
+
+  for (const q of queriesToTest) {
+    // 1. Primary: exact match on barcode field
+    const byBarcode = products.find(p => p.barcode && p.barcode.trim().toLowerCase() === q);
+    if (byBarcode) return byBarcode;
+
+    // 2. Secondary fallback: exact match on product ID (allows scanning internal product ID labels)
+    const byId = products.find(p => p.id.trim().toLowerCase() === q);
+    if (byId) return byId;
+  }
 
   return null;
 }
