@@ -1,0 +1,7 @@
+{
+  "name": "Alpha Chemist",
+  "description": "Alpha Chemist POS & Inventory Management System. Complete pharmacy management with prescription and OTC products, medicine categories, pharmaceutical unit types, barcode scanning, thermal receipt printing, and stock control.",
+  "requestFramePermissions": ["bluetooth", "usb", "camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
