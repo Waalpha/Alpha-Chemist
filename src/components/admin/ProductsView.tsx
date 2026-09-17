@@ -3,7 +3,7 @@ import { UserProfile, BusinessConfig, Product, Category } from '../../types';
 import { db, DEFAULT_BUSINESS_ID } from '../../lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { formatCurrency, logAuditAction } from '../../lib/utils';
-import { Package, Plus, Search, Edit2, Trash2, X, AlertCircle, Download, Upload, Layers, CheckCircle2, Barcode, Sparkles, Printer, Maximize2, Copy, Check, Tag } from 'lucide-react';
+import { Package, Plus, Search, Edit2, Trash2, X, AlertCircle, Download, Upload, Layers, CheckCircle2, Sparkles, Check, Barcode, Printer, Maximize2, Copy } from 'lucide-react';
 import { generateBarcode, isBarcodeDuplicate, detectBarcodeFormat, cleanScannedBarcode } from '../../lib/barcodeUtils';
 import { BarcodeDisplay } from '../common/BarcodeDisplay';
 import { BarcodeLabelPrintModal } from '../common/BarcodeLabelPrintModal';
@@ -45,19 +45,6 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [isDeletingProduct, setIsDeletingProduct] = useState(false);
 
-  // Barcode Label Print Modal State
-  const [labelPrintProduct, setLabelPrintProduct] = useState<Product | null>(null);
-
-  // Enlarged Barcode Modal State
-  const [enlargedBarcodeProduct, setEnlargedBarcodeProduct] = useState<{ name: string; barcode: string } | null>(null);
-  const [copiedBarcode, setCopiedBarcode] = useState(false);
-
-  // Bulk Barcode Label Print State
-  const [isBulkPrintModalOpen, setIsBulkPrintModalOpen] = useState(false);
-  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
-  const [bulkPrintInitialIds, setBulkPrintInitialIds] = useState<string[]>([]);
-  const [isAutoAssigningBarcodes, setIsAutoAssigningBarcodes] = useState(false);
-
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
@@ -70,6 +57,14 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
     minStockLevel: 10
   });
   const [error, setError] = useState('');
+
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [isBulkPrintModalOpen, setIsBulkPrintModalOpen] = useState(false);
+  const [bulkPrintInitialIds, setBulkPrintInitialIds] = useState<string[]>([]);
+  const [isAutoAssigningBarcodes, setIsAutoAssigningBarcodes] = useState(false);
+  const [labelPrintProduct, setLabelPrintProduct] = useState<Product | null>(null);
+  const [enlargedBarcodeProduct, setEnlargedBarcodeProduct] = useState<{ name: string; barcode: string } | null>(null);
+  const [copiedBarcode, setCopiedBarcode] = useState(false);
 
   const foodCourtTerms = [
     'hotel', 'room', 'beer', 'tusker', 'white cap', 'guinness', 'heineken',

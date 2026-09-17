@@ -89,4 +89,27 @@ body {
   }
 }
 
+/* Camera Barcode Scanner Viewport Styling */
+#barcode-camera-viewport {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 240px !important;
+  overflow: hidden !important;
+  background-color: #000 !important;
+  border-radius: 1rem !important;
+}
+
+#barcode-camera-viewport video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 1rem !important;
+}
+
+#barcode-camera-viewport canvas {
+  border-radius: 1rem !important;
+}
+
+
 

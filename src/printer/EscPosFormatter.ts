@@ -50,31 +50,7 @@ export class EscPosFormatter {
     this.addLine(char.repeat(32)); // 32 chars width for 58mm thermal paper
   }
 
-  public addBarcode(code: string, format: 'EAN13' | 'CODE128' = 'CODE128'): void {
-    const clean = code.trim();
-    if (!clean) return;
 
-    // Set barcode height (50 dots)
-    this.addString(GS + 'h' + String.fromCharCode(50));
-    // Set barcode width (2)
-    this.addString(GS + 'w' + String.fromCharCode(2));
-    // Set HRI characters printing position: below barcode (2)
-    this.addString(GS + 'H' + String.fromCharCode(2));
-
-    const isEan = format === 'EAN13' || (clean.length === 13 && /^\d+$/.test(clean));
-
-    if (isEan && clean.length >= 12 && /^\d+$/.test(clean)) {
-      // ESC/POS EAN-13 (Function B: m=67, n=12 or 13)
-      const eanData = clean.slice(0, 12);
-      this.addString(GS + 'k' + String.fromCharCode(67) + String.fromCharCode(eanData.length) + eanData);
-    } else {
-      // ESC/POS CODE128 (Function B: m=73)
-      // Standard ESC/POS specification requires starting with a code set selection character ({A, {B, or {C)
-      const dataWithSet = clean.startsWith('{') ? clean : `{B${clean}`;
-      this.addString(GS + 'k' + String.fromCharCode(73) + String.fromCharCode(dataWithSet.length) + dataWithSet);
-    }
-    this.addLine();
-  }
 
   public cut(): void {
     this.addString('\n\n\n');
@@ -243,37 +219,6 @@ export class EscPosFormatter {
     return formatter.getData();
   }
 
-  public static formatBarcodeLabels(
-    items: { name: string; genericName?: string; price: number; barcode: string; copies: number; rx?: boolean }[],
-    businessConfig?: BusinessConfig | null
-  ): Uint8Array {
-    const formatter = new EscPosFormatter();
-    const currency = businessConfig?.currency || 'KSh';
-    const store = businessConfig?.name || 'ALPHA CHEMIST';
 
-    items.forEach(item => {
-      const count = Math.max(1, item.copies || 1);
-      for (let c = 0; c < count; c++) {
-        formatter.setAlignment('center');
-        formatter.setBold(true);
-        formatter.addLine(store.toUpperCase());
-        formatter.addLine(item.name.slice(0, 24));
-        formatter.setBold(false);
-        if (item.genericName) {
-          formatter.addLine(item.genericName.slice(0, 24));
-        }
-        const isEan = item.barcode.length === 13 && /^\d+$/.test(item.barcode);
-        formatter.addBarcode(item.barcode, isEan ? 'EAN13' : 'CODE128');
-        formatter.setBold(true);
-        formatter.addLine(`${currency} ${item.price.toLocaleString()}${item.rx ? ' [Rx]' : ''}`);
-        formatter.setBold(false);
-        formatter.addSeparator('-');
-        formatter.addLine();
-      }
-    });
-
-    formatter.cut();
-    return formatter.getData();
-  }
 }
 

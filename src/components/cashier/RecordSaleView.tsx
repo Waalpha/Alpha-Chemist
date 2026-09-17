@@ -18,10 +18,10 @@ import {
   ArrowLeft,
   X,
   Printer,
+  Sparkles,
   Barcode,
   Camera,
-  ScanLine,
-  Sparkles
+  ScanLine
 } from 'lucide-react';
 import { ReceiptModal } from '../common/ReceiptModal';
 import { CameraBarcodeScannerModal } from '../common/CameraBarcodeScannerModal';

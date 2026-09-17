@@ -125,22 +125,7 @@ export class ThermalPrinterService {
     }
   }
 
-  public async printBarcodeLabels(
-    items: { name: string; genericName?: string; price: number; barcode: string; copies: number; rx?: boolean }[],
-    businessConfig?: BusinessConfig | null
-  ): Promise<void> {
-    if (this.connectionStatus !== 'connected') {
-      await this.connect();
-    }
 
-    const data = EscPosFormatter.formatBarcodeLabels(items, businessConfig);
-
-    if (this.activeType === 'usb') {
-      await this.usbDriver.sendData(data);
-    } else {
-      await this.btDriver.sendData(data);
-    }
-  }
 
   public async disconnect(): Promise<void> {
     try {
