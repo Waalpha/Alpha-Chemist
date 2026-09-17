@@ -99,7 +99,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Amoxicillin 500mg Capsules',
     genericName: 'Amoxicillin Trihydrate',
     dosage: '500mg',
-    barcode: '616110002001',
     categoryId: 'cat-antibiotics',
     categoryName: 'Antibiotics & Anti-Infectives',
     unitType: 'Blister Pack',
@@ -121,7 +120,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Augmentin 625mg Tablets (14s)',
     genericName: 'Amoxicillin / Clavulanic Acid',
     dosage: '625mg',
-    barcode: '616110002002',
     categoryId: 'cat-antibiotics',
     categoryName: 'Antibiotics & Anti-Infectives',
     unitType: 'Strip',
@@ -143,7 +141,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Azithromycin 500mg Tablets (3s)',
     genericName: 'Azithromycin Dihydrate',
     dosage: '500mg',
-    barcode: '616110002003',
     categoryId: 'cat-antibiotics',
     categoryName: 'Antibiotics & Anti-Infectives',
     unitType: 'Pack',
@@ -165,7 +162,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Ciprofloxacin 500mg Tablets (10s)',
     genericName: 'Ciprofloxacin Hydrochloride',
     dosage: '500mg',
-    barcode: '616110002004',
     categoryId: 'cat-antibiotics',
     categoryName: 'Antibiotics & Anti-Infectives',
     unitType: 'Blister Pack',
@@ -187,7 +183,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Paracetamol 500mg Tablets (10s)',
     genericName: 'Acetaminophen / Paracetamol',
     dosage: '500mg',
-    barcode: '616110002005',
     categoryId: 'cat-otc-pain',
     categoryName: 'Pain Relief & Analgesics',
     unitType: 'Blister Pack',
@@ -209,7 +204,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Panadol Extra Tablets (20s)',
     genericName: 'Paracetamol + Caffeine',
     dosage: '500mg/65mg',
-    barcode: '616110002006',
     categoryId: 'cat-otc-pain',
     categoryName: 'Pain Relief & Analgesics',
     unitType: 'Pack',
@@ -231,7 +225,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Ibuprofen 400mg Tablets (10s)',
     genericName: 'Ibuprofen',
     dosage: '400mg',
-    barcode: '616110002007',
     categoryId: 'cat-otc-pain',
     categoryName: 'Pain Relief & Analgesics',
     unitType: 'Blister Pack',
@@ -253,7 +246,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Diclofenac Sodium 50mg Tablets (10s)',
     genericName: 'Diclofenac Sodium',
     dosage: '50mg',
-    barcode: '616110002008',
     categoryId: 'cat-otc-pain',
     categoryName: 'Pain Relief & Analgesics',
     unitType: 'Blister Pack',
@@ -275,7 +267,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Benylin 4-Flu Cough Syrup (100ml)',
     genericName: 'Diphenhydramine, Paracetamol, Pseudoephedrine',
     dosage: '100ml',
-    barcode: '616110002009',
     categoryId: 'cat-cough-respiratory',
     categoryName: 'Cough, Cold & Respiratory',
     unitType: 'Syrup (100ml)',
@@ -297,7 +288,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Ascoril Expectorant Syrup (100ml)',
     genericName: 'Bromhexine, Guaifenesin, Terbutaline',
     dosage: '100ml',
-    barcode: '616110002010',
     categoryId: 'cat-cough-respiratory',
     categoryName: 'Cough, Cold & Respiratory',
     unitType: 'Syrup (100ml)',
@@ -319,7 +309,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Strepsils Honey & Lemon Lozenges (16s)',
     genericName: 'Dichlorobenzyl alcohol & Amylmetacresol',
     dosage: '16 Lozenges',
-    barcode: '616110002011',
     categoryId: 'cat-cough-respiratory',
     categoryName: 'Cough, Cold & Respiratory',
     unitType: 'Pack',
@@ -341,7 +330,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Cetirizine 10mg Allergy Tablets (10s)',
     genericName: 'Cetirizine Dihydrochloride',
     dosage: '10mg',
-    barcode: '616110002012',
     categoryId: 'cat-cough-respiratory',
     categoryName: 'Cough, Cold & Respiratory',
     unitType: 'Strip',
@@ -363,7 +351,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Omeprazole 20mg Capsules (14s)',
     genericName: 'Omeprazole Delayed-Release',
     dosage: '20mg',
-    barcode: '616110002013',
     categoryId: 'cat-digestive',
     categoryName: 'Digestive & Gastrointestinal',
     unitType: 'Strip',
@@ -385,7 +372,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Gaviscon Double Action Liquid (200ml)',
     genericName: 'Sodium alginate, Calcium carbonate',
     dosage: '200ml',
-    barcode: '616110002014',
     categoryId: 'cat-digestive',
     categoryName: 'Digestive & Gastrointestinal',
     unitType: 'Syrup (200ml)',
@@ -407,7 +393,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Oral Rehydration Salts (ORS) Sachet',
     genericName: 'WHO Oral Rehydration Formula',
     dosage: '20.5g powder',
-    barcode: '616110002015',
     categoryId: 'cat-digestive',
     categoryName: 'Digestive & Gastrointestinal',
     unitType: 'Sachet',
@@ -429,7 +414,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Vitamin C 1000mg Effervescent (20s)',
     genericName: 'Ascorbic Acid + Zinc',
     dosage: '1000mg',
-    barcode: '616110002017',
     categoryId: 'cat-vitamins',
     categoryName: 'Vitamins & Supplements',
     unitType: 'Tube',
@@ -451,7 +435,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Zinc Sulphate 20mg Tablets (10s)',
     genericName: 'Zinc Sulphate Monohydrate',
     dosage: '20mg',
-    barcode: '616110002018',
     categoryId: 'cat-vitamins',
     categoryName: 'Vitamins & Supplements',
     unitType: 'Strip',
@@ -473,7 +456,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Seven Seas Pure Cod Liver Oil (150ml)',
     genericName: 'Omega-3 + Vitamins A, D, E',
     dosage: '150ml',
-    barcode: '616110002019',
     categoryId: 'cat-vitamins',
     categoryName: 'Vitamins & Supplements',
     unitType: 'Bottle',
@@ -495,7 +477,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Betadine Antiseptic Solution 10% (100ml)',
     genericName: 'Povidone Iodine 10% w/v',
     dosage: '100ml',
-    barcode: '616110002021',
     categoryId: 'cat-first-aid',
     categoryName: 'First Aid & Surgical Supplies',
     unitType: 'Bottle',
@@ -517,7 +498,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Surgical Spirit B.P. 70% (200ml)',
     genericName: 'Ethanol 70% Disinfectant',
     dosage: '200ml',
-    barcode: '616110002022',
     categoryId: 'cat-first-aid',
     categoryName: 'First Aid & Surgical Supplies',
     unitType: 'Bottle',
@@ -539,7 +519,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Crepe Bandage 7.5cm x 4.5m',
     genericName: 'Elastic Compression Bandage',
     dosage: '7.5cm',
-    barcode: '616110002023',
     categoryId: 'cat-first-aid',
     categoryName: 'First Aid & Surgical Supplies',
     unitType: 'Roll',
@@ -561,7 +540,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Sterile Gauze Swabs 8-ply (5s)',
     genericName: '100% Pure Cotton Gauze',
     dosage: '10cm x 10cm',
-    barcode: '616110002024',
     categoryId: 'cat-first-aid',
     categoryName: 'First Aid & Surgical Supplies',
     unitType: 'Pack',
@@ -583,7 +561,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Absorbent Cotton Wool 100g',
     genericName: 'Medical Grade Cotton Wool',
     dosage: '100g',
-    barcode: '616110002025',
     categoryId: 'cat-first-aid',
     categoryName: 'First Aid & Surgical Supplies',
     unitType: 'Roll',
@@ -605,7 +582,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Elastoplast Fabric Plasters (20s)',
     genericName: 'Sterile Adhesive Wound Plaster',
     dosage: '20 strips',
-    barcode: '616110002026',
     categoryId: 'cat-first-aid',
     categoryName: 'First Aid & Surgical Supplies',
     unitType: 'Box',
@@ -627,7 +603,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Digital Clinical Oral Thermometer',
     genericName: 'LCD Fast Read Clinical Thermometer',
     dosage: '1 Unit',
-    barcode: '616110002027',
     categoryId: 'cat-diagnostics',
     categoryName: 'Diagnostics & Medical Devices',
     unitType: 'Piece',
@@ -649,7 +624,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Accu-Chek Blood Glucose Test Strips (50s)',
     genericName: 'Blood Glucose Test Strips',
     dosage: '50 strips',
-    barcode: '616110002028',
     categoryId: 'cat-diagnostics',
     categoryName: 'Diagnostics & Medical Devices',
     unitType: 'Box',
@@ -671,7 +645,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Clotrimazole 1% Antifungal Cream (20g)',
     genericName: 'Clotrimazole USP 1% w/w',
     dosage: '20g tube',
-    barcode: '616110002029',
     categoryId: 'cat-skin',
     categoryName: 'Dermatology & Topicals',
     unitType: 'Tube',
@@ -693,7 +666,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Hydrocortisone 1% Topical Cream (15g)',
     genericName: 'Hydrocortisone Acetate 1%',
     dosage: '15g tube',
-    barcode: '616110002030',
     categoryId: 'cat-skin',
     categoryName: 'Dermatology & Topicals',
     unitType: 'Tube',
@@ -715,7 +687,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Dettol Antiseptic Disinfectant (250ml)',
     genericName: 'Chloroxylenol Antiseptic Liquid',
     dosage: '250ml',
-    barcode: '616110002031',
     categoryId: 'cat-skin',
     categoryName: 'Dermatology & Topicals',
     unitType: 'Bottle',
@@ -737,7 +708,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Woodwards Gripe Water (150ml)',
     genericName: 'Dill Seed Oil, Sodium Bicarbonate',
     dosage: '150ml',
-    barcode: '616110002032',
     categoryId: 'cat-baby',
     categoryName: 'Maternal & Child Health',
     unitType: 'Bottle',
@@ -759,7 +729,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Calpol Infant Suspension Paracetamol (100ml)',
     genericName: 'Paracetamol Paediatric 120mg/5ml',
     dosage: '100ml',
-    barcode: '616110002033',
     categoryId: 'cat-baby',
     categoryName: 'Maternal & Child Health',
     unitType: 'Syrup (100ml)',
@@ -781,7 +750,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Amlodipine 5mg Blood Pressure Tablets (30s)',
     genericName: 'Amlodipine Besylate',
     dosage: '5mg',
-    barcode: '616110002034',
     categoryId: 'cat-presc',
     categoryName: 'Prescription Medicines',
     unitType: 'Box',
@@ -803,7 +771,6 @@ const _OLD_FALLBACK_PRODUCTS: any[] = [
     name: 'Metformin 500mg Diabetes Tablets (100s)',
     genericName: 'Metformin Hydrochloride',
     dosage: '500mg',
-    barcode: '616110002035',
     categoryId: 'cat-presc',
     categoryName: 'Prescription Medicines',
     unitType: 'Box',
@@ -892,11 +859,6 @@ export function getLocalCachedProducts(): Product[] {
     if (Array.isArray(stored) && stored.length > 0) {
       let changed = false;
       const enriched = stored.map((p: Product, idx: number) => {
-        if (!p.barcode) {
-          const fallback = DEFAULT_FALLBACK_PRODUCTS.find(fb => fb.id === p.id);
-          p.barcode = fallback?.barcode || `61611000${(2000 + idx).toString().slice(-4)}`;
-          changed = true;
-        }
         return p;
       });
       if (changed) {
@@ -942,7 +904,7 @@ export function deductLocalProductStock(items: { productId: string; quantity: nu
     for (const item of items) {
       if (item.productId.startsWith('custom-')) continue;
       const p = products.find(prod => prod.id === item.productId);
-      if (p) {
+      if (p && p.isInventory !== false) {
         p.currentStock = Math.max(0, (p.currentStock || 0) - item.quantity);
       }
     }
@@ -1010,8 +972,12 @@ export async function syncOfflineQueue(): Promise<{ syncedCount: number; errors:
       await setDoc(saleRef, sale, { merge: true });
 
       // 2. Update stock in Firestore for inventory items
+      const cachedProds = getLocalCachedProducts();
       for (const item of sale.items) {
         if (item.productId.startsWith('custom-')) continue;
+        const localP = cachedProds.find(p => p.id === item.productId);
+        if (localP && localP.isInventory === false) continue;
+
         try {
           const prodRef = doc(db, 'businesses', DEFAULT_BUSINESS_ID, 'products', item.productId);
           await updateDoc(prodRef, {

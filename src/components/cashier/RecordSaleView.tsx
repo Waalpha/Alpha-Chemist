@@ -18,20 +18,9 @@ import {
   ArrowLeft,
   X,
   Printer,
-  Sparkles,
-  Barcode,
-  Camera,
-  ScanLine
+  Sparkles
 } from 'lucide-react';
 import { ReceiptModal } from '../common/ReceiptModal';
-import { CameraBarcodeScannerModal } from '../common/CameraBarcodeScannerModal';
-import { UnknownBarcodeModal } from '../common/UnknownBarcodeModal';
-import {
-  findProductByBarcode,
-  cleanScannedBarcode,
-  playScanSuccessSound,
-  playScanErrorSound
-} from '../../lib/barcodeUtils';
 import {
   saveSaleLocallyAndQueue,
   cacheLocalProducts,
@@ -52,28 +41,6 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<SaleItem[]>([]);
-  
-  // Barcode scanning states
-  const [barcodeQuery, setBarcodeQuery] = useState('');
-  const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
-  const [unknownBarcode, setUnknownBarcode] = useState('');
-  const [showUnknownModal, setShowUnknownModal] = useState(false);
-  const [lastScannedItem, setLastScannedItem] = useState<{ product: Product; time: number } | null>(null);
-
-  // Quick Add from Barcode Modal state
-  const [showQuickAddModal, setShowQuickAddModal] = useState(false);
-  const [quickAddBarcode, setQuickAddBarcode] = useState('');
-  const [quickAddName, setQuickAddName] = useState('');
-  const [quickAddCategoryId, setQuickAddCategoryId] = useState('');
-  const [quickAddSellingPrice, setQuickAddSellingPrice] = useState('200');
-  const [quickAddBuyingPrice, setQuickAddBuyingPrice] = useState('120');
-  const [quickAddOpeningStock, setQuickAddOpeningStock] = useState('50');
-  const [quickAddUnitType, setQuickAddUnitType] = useState<Product['unitType']>('Tablet');
-  const [quickAddLoading, setQuickAddLoading] = useState(false);
-
-  const barcodeInputRef = useRef<HTMLInputElement>(null);
-  const scannerBufferRef = useRef<string>('');
-  const lastKeyTimeRef = useRef<number>(0);
 
   // Payment states
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
@@ -231,12 +198,6 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
     const currentQtyInCart = existingIndex >= 0 ? cart[existingIndex].quantity : 0;
     const requestedQty = currentQtyInCart + delta;
 
-    if (delta > 0 && requestedQty > product.currentStock && !businessConfig?.allowNegativeStock) {
-      setError(`Cannot add "${product.name}": Available stock is only ${product.currentStock} ${product.unitType || 'item'}(s). Enable "Allow Negative Stock" in Settings if you wish to oversell.`);
-      playScanErrorSound();
-      return;
-    }
-
     if (requestedQty <= 0) {
       if (existingIndex >= 0) {
         const newCart = [...cart];
@@ -257,7 +218,6 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
         {
           productId: product.id,
           productName: product.name,
-          barcode: product.barcode,
           quantity: 1,
           unitPrice: product.sellingPrice,
           totalAmount: product.sellingPrice
@@ -268,12 +228,6 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
 
   const updateCartQty = (productId: string, newQty: number) => {
     setError('');
-    const product = products.find(p => p.id === productId);
-    if (product && newQty > product.currentStock && !businessConfig?.allowNegativeStock) {
-      setError(`Cannot increase quantity for "${product.name}": Only ${product.currentStock} available in stock.`);
-      playScanErrorSound();
-      return;
-    }
 
     if (newQty <= 0) {
       setCart(cart.filter(item => item.productId !== productId));
@@ -290,213 +244,6 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
       }
       return item;
     }));
-  };
-
-  const handleBarcodeScanned = (rawCode: string) => {
-    if (!rawCode || !rawCode.trim()) return;
-    const sanitized = cleanScannedBarcode(rawCode) || rawCode.trim();
-
-    // Search products in current business/tenant
-    const matchedProduct = findProductByBarcode(products, rawCode);
-
-    if (matchedProduct) {
-      if (matchedProduct.status === 'inactive') {
-        setError(`Product "${matchedProduct.name}" is inactive and cannot be sold.`);
-        playScanErrorSound();
-        setBarcodeQuery('');
-        return;
-      }
-
-      // Check available stock
-      const existingInCart = cart.find(i => i.productId === matchedProduct.id);
-      const currentQty = existingInCart ? existingInCart.quantity : 0;
-      const nextQty = currentQty + 1;
-
-      if (nextQty > matchedProduct.currentStock && !businessConfig?.allowNegativeStock) {
-        setError(`Cannot scan "${matchedProduct.name}": Available stock is only ${matchedProduct.currentStock} ${matchedProduct.unitType || 'item'}(s).`);
-        playScanErrorSound();
-        setBarcodeQuery('');
-        return;
-      }
-
-      addToCart(matchedProduct, 1);
-      playScanSuccessSound();
-      setLastScannedItem({ product: matchedProduct, time: Date.now() });
-      setBarcodeQuery('');
-      setError('');
-
-      // Auto-refocus scanner input for rapid continuous scanning
-      setTimeout(() => {
-        barcodeInputRef.current?.focus();
-      }, 50);
-    } else {
-      playScanErrorSound();
-      setUnknownBarcode(sanitized);
-      setShowUnknownModal(true);
-      setBarcodeQuery('');
-    }
-  };
-
-  const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (barcodeQuery.trim()) {
-        handleBarcodeScanned(barcodeQuery.trim());
-      }
-    }
-  };
-
-  // Automatically focus the barcode input when POS opens or mobile view toggles
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      barcodeInputRef.current?.focus();
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [mobileView]);
-
-  // Global keyboard wedge listener for USB and Bluetooth barcode scanners + shortcuts
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // F2 hotkey: Focus barcode scanner input
-      if (e.key === 'F2') {
-        e.preventDefault();
-        barcodeInputRef.current?.focus();
-        barcodeInputRef.current?.select();
-        return;
-      }
-
-      // F4 hotkey: Go to payment / cart
-      if (e.key === 'F4') {
-        e.preventDefault();
-        if (cart.length > 0) {
-          setMobileView('payment');
-        }
-        return;
-      }
-
-      // Escape key: Close modals
-      if (e.key === 'Escape') {
-        if (isCameraScannerOpen) setIsCameraScannerOpen(false);
-        if (showUnknownModal) setShowUnknownModal(false);
-        if (showQuickAddModal) setShowQuickAddModal(false);
-        if (showCustomModal) setShowCustomModal(false);
-        if (showOpenTabsModal) setShowOpenTabsModal(false);
-        return;
-      }
-
-      // If user is currently focused inside a standard text input (except barcode input), do not intercept
-      const activeEl = document.activeElement;
-      const isOtherInput =
-        activeEl &&
-        (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT') &&
-        activeEl !== barcodeInputRef.current;
-
-      if (isOtherInput) return;
-      if (activeEl === barcodeInputRef.current) return;
-
-      // Handle barcode scanner keyboard wedge input (rapid character buffer terminated by Enter)
-      const now = Date.now();
-      const timeDiff = now - lastKeyTimeRef.current;
-      lastKeyTimeRef.current = now;
-
-      if (e.key === 'Enter') {
-        if (scannerBufferRef.current.trim().length >= 3) {
-          e.preventDefault();
-          const scannedCode = scannerBufferRef.current.trim();
-          scannerBufferRef.current = '';
-          handleBarcodeScanned(scannedCode);
-        } else {
-          scannerBufferRef.current = '';
-        }
-      } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        if (timeDiff > 150) {
-          scannerBufferRef.current = e.key;
-        } else {
-          scannerBufferRef.current += e.key;
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [cart, isCameraScannerOpen, showUnknownModal, showQuickAddModal, showCustomModal, showOpenTabsModal, products, businessConfig]);
-
-  const openQuickAddProductModal = (barcode: string) => {
-    setQuickAddBarcode(barcode);
-    setQuickAddName('');
-    setQuickAddCategoryId(categories[0]?.id || 'cat-antibiotics');
-    setQuickAddSellingPrice('200');
-    setQuickAddBuyingPrice('120');
-    setQuickAddOpeningStock('50');
-    setQuickAddUnitType('Tablet');
-    setShowQuickAddModal(true);
-  };
-
-  const handleQuickAddSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickAddName.trim()) {
-      setError('Product name is required');
-      return;
-    }
-    const sellPrice = parseFloat(quickAddSellingPrice);
-    if (isNaN(sellPrice) || sellPrice <= 0) {
-      setError('Selling price must be greater than 0');
-      return;
-    }
-
-    setQuickAddLoading(true);
-    try {
-      const now = new Date().toISOString();
-      const productId = 'prod-' + Date.now();
-      const cat = categories.find(c => c.id === quickAddCategoryId);
-      const categoryName = cat ? cat.name : 'Antibiotics & Anti-Infectives';
-      const stock = parseInt(quickAddOpeningStock) || 50;
-
-      const newProd: Product = {
-        id: productId,
-        name: quickAddName.trim(),
-        barcode: quickAddBarcode.trim(),
-        categoryId: quickAddCategoryId || categories[0]?.id || 'cat-antibiotics',
-        categoryName,
-        unitType: quickAddUnitType,
-        buyingPrice: parseFloat(quickAddBuyingPrice) || 0,
-        sellingPrice: sellPrice,
-        openingStock: stock,
-        currentStock: stock,
-        stockAdded: 0,
-        minStockLevel: 10,
-        status: 'active',
-        createdAt: now,
-        updatedAt: now
-      };
-
-      try {
-        await setDoc(doc(db, 'businesses', DEFAULT_BUSINESS_ID, 'products', productId), newProd);
-      } catch (err) {
-        console.warn('Firestore fallback on quick add:', err);
-      }
-
-      const updatedProds = [newProd, ...products];
-      setProducts(updatedProds);
-      cacheLocalProducts(updatedProds);
-      localStorage.setItem('bar_pos_local_products', JSON.stringify(updatedProds));
-
-      // Automatically add newly registered product to cart!
-      addToCart(newProd, 1);
-      playScanSuccessSound();
-      setLastScannedItem({ product: newProd, time: Date.now() });
-
-      setShowQuickAddModal(false);
-      setBarcodeQuery('');
-      setTimeout(() => {
-        barcodeInputRef.current?.focus();
-      }, 100);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Failed to save product');
-    } finally {
-      setQuickAddLoading(false);
-    }
   };
 
   const removeFromCart = (productId: string) => {
@@ -619,13 +366,11 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
   const filteredProducts = products.filter(p => {
     const matchesCat = selectedCategory === 'all' || p.categoryId === selectedCategory;
     const query = searchQuery.toLowerCase().trim();
-    const cleanQ = cleanScannedBarcode(searchQuery).toLowerCase();
     const matchesSearch = !query ||
                           p.name.toLowerCase().includes(query) ||
                           p.categoryName.toLowerCase().includes(query) ||
                           (p.genericName && p.genericName.toLowerCase().includes(query)) ||
-                          (p.dosage && p.dosage.toLowerCase().includes(query)) ||
-                          (p.barcode && (p.barcode.toLowerCase().includes(query) || (cleanQ && p.barcode.toLowerCase().includes(cleanQ))));
+                          (p.dosage && p.dosage.toLowerCase().includes(query));
     return matchesCat && matchesSearch;
   });
 
@@ -665,89 +410,7 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
         </button>
       </div>
 
-      {/* Prominent Barcode Scanner Bar at the Top of POS */}
-      <div className="rounded-3xl bg-slate-900 p-4 text-white shadow-lg border border-slate-800">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
-              <Barcode className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h3 className="text-sm font-bold text-white tracking-wide">POS Barcode Scanner</h3>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse">
-                  ● Scanner Ready (USB / Bluetooth / Camera)
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400">
-                Scan with any handheld scanner or press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px] border border-slate-700">F2</kbd> to focus
-              </p>
-            </div>
-          </div>
 
-          {lastScannedItem && Date.now() - lastScannedItem.time < 8000 && (
-            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-600/50 text-emerald-300 text-xs">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="truncate max-w-[200px]">
-                Added: <strong>{lastScannedItem.product.name}</strong>
-              </span>
-              <span className="text-emerald-400 font-mono font-bold">
-                {formatCurrency(lastScannedItem.product.sellingPrice, currency)}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-400">
-              <ScanLine className="w-5 h-5" />
-            </div>
-            <input
-              ref={barcodeInputRef}
-              type="text"
-              value={barcodeQuery}
-              onChange={(e) => setBarcodeQuery(e.target.value)}
-              onKeyDown={handleBarcodeKeyDown}
-              placeholder="Scan barcode with scanner or type code and press Enter..."
-              className="w-full rounded-2xl border border-slate-700 bg-slate-950/90 py-3.5 pl-11 pr-24 font-mono text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all"
-            />
-            {barcodeQuery && (
-              <button
-                type="button"
-                onClick={() => {
-                  setBarcodeQuery('');
-                  barcodeInputRef.current?.focus();
-                }}
-                className="absolute inset-y-0 right-14 pr-2 flex items-center text-slate-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                if (barcodeQuery.trim()) {
-                  handleBarcodeScanned(barcodeQuery.trim());
-                }
-              }}
-              className="absolute inset-y-1.5 right-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all flex items-center space-x-1 cursor-pointer"
-            >
-              <span>Add</span>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsCameraScannerOpen(true)}
-            className="px-4 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold transition-all flex items-center justify-center space-x-2 shrink-0 cursor-pointer shadow-sm active:scale-95"
-            title="Open camera scanner for mobile/tablet/webcam"
-          >
-            <Camera className="w-4 h-4 text-emerald-400" />
-            <span>Camera Scanner</span>
-          </button>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Product Catalog & Search (Visible on desktop or when mobileView === 'catalog') */}
@@ -822,14 +485,11 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 max-h-[calc(100vh-230px)] overflow-y-auto pr-1">
             {filteredProducts.map(product => {
               const inCart = cart.find(i => i.productId === product.id);
-              const isOutOfStock = product.currentStock <= 0;
 
               return (
                 <div
                   key={product.id}
-                  className={`rounded-2xl border p-4 bg-white shadow-xs flex flex-col justify-between transition-all ${
-                    isOutOfStock ? 'border-emerald-200/80 bg-emerald-50/10' : 'border-gray-200 hover:border-emerald-500 hover:shadow-md'
-                  }`}
+                  className="rounded-2xl border p-4 bg-white shadow-xs flex flex-col justify-between transition-all border-gray-200 hover:border-emerald-500 hover:shadow-md"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
@@ -843,12 +503,7 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
                               Rx
                             </span>
                           )}
-                          {product.barcode && (
-                            <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                              <Barcode className="w-3 h-3 text-slate-500" />
-                              <span>{product.barcode}</span>
-                            </span>
-                          )}
+
                         </div>
                         <h4 className="font-bold text-gray-900 text-base">{product.name}</h4>
                         {product.genericName && (
@@ -863,9 +518,8 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
                     </div>
 
                     <div className="mt-3 flex items-center justify-between text-xs">
-                      <span className={`font-semibold ${isOutOfStock ? 'text-emerald-700' : product.currentStock <= product.minStockLevel ? 'text-emerald-600' : 'text-emerald-600'}`}>
-                        Available: {product.currentStock} {product.unitType}s
-                        {isOutOfStock && <span className="ml-1 text-[10px] text-emerald-600 font-normal">(Tap to sell)</span>}
+                      <span className="font-semibold text-slate-500">
+                        Unit: {product.unitType}
                       </span>
                       {inCart && (
                         <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
@@ -1413,187 +1067,7 @@ export function RecordSaleView({ user, businessConfig }: RecordSaleViewProps) {
           </div>
         </div>
       )}
-      {/* Camera Barcode Scanner Modal */}
-      <CameraBarcodeScannerModal
-        isOpen={isCameraScannerOpen}
-        onClose={() => {
-          setIsCameraScannerOpen(false);
-          setTimeout(() => barcodeInputRef.current?.focus(), 50);
-        }}
-        onScan={(scannedCode) => {
-          setIsCameraScannerOpen(false);
-          handleBarcodeScanned(scannedCode);
-        }}
-      />
 
-      {/* Unknown Barcode Modal */}
-      <UnknownBarcodeModal
-        isOpen={showUnknownModal}
-        scannedBarcode={unknownBarcode}
-        onClose={() => {
-          setShowUnknownModal(false);
-          setTimeout(() => barcodeInputRef.current?.focus(), 50);
-        }}
-        onAddNewProduct={(barcode) => {
-          setShowUnknownModal(false);
-          openQuickAddProductModal(barcode);
-        }}
-        onSearchManual={() => {
-          setShowUnknownModal(false);
-          setSearchQuery(unknownBarcode);
-        }}
-      />
-
-      {/* Quick Add Product from Barcode Modal */}
-      {showQuickAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div className="flex items-center space-x-2.5">
-                <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-xl">
-                  <Plus className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Add Scanned Product</h3>
-                  <p className="text-xs text-gray-500">Save to inventory & add to cart immediately</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowQuickAddModal(false)}
-                className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleQuickAddSubmit} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                  Barcode Value
-                </label>
-                <input
-                  type="text"
-                  readOnly
-                  value={quickAddBarcode}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 p-2.5 font-mono text-xs font-bold text-slate-700 select-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                  Product Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  value={quickAddName}
-                  onChange={(e) => setQuickAddName(e.target.value)}
-                  placeholder="e.g. Red Bull Energy Drink 250ml"
-                  className="w-full rounded-xl border border-gray-300 p-2.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                    Category
-                  </label>
-                  <select
-                    value={quickAddCategoryId}
-                    onChange={(e) => setQuickAddCategoryId(e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 p-2.5 text-sm bg-white focus:border-emerald-600 focus:outline-none"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                    Unit Type
-                  </label>
-                  <select
-                    value={quickAddUnitType}
-                    onChange={(e) => setQuickAddUnitType(e.target.value as any)}
-                    className="w-full rounded-xl border border-gray-300 p-2.5 text-sm bg-white focus:border-emerald-600 focus:outline-none"
-                  >
-                    <option value="Tablet">Tablet</option>
-                    <option value="Capsule">Capsule</option>
-                    <option value="Strip">Strip</option>
-                    <option value="Blister Pack">Blister Pack</option>
-                    <option value="Bottle">Bottle (Syrups/Liquid)</option>
-                    <option value="Syrup (100ml)">Syrup (100ml)</option>
-                    <option value="Syrup (200ml)">Syrup (200ml)</option>
-                    <option value="Box">Box</option>
-                    <option value="Tube">Tube (Ointment/Cream)</option>
-                    <option value="Sachet">Sachet</option>
-                    <option value="Vial">Vial</option>
-                    <option value="Ampoule">Ampoule</option>
-                    <option value="Roll">Roll (Bandages/Cotton)</option>
-                    <option value="Piece">Piece (Devices)</option>
-                    <option value="Pack">Pack</option>
-                    <option value="Dose">Dose</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                    Selling Price ({currency}) *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={quickAddSellingPrice}
-                    onChange={(e) => setQuickAddSellingPrice(e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 p-2.5 text-sm focus:border-emerald-600 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                    Initial Stock *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={quickAddOpeningStock}
-                    onChange={(e) => setQuickAddOpeningStock(e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 p-2.5 text-sm focus:border-emerald-600 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 flex space-x-2.5">
-                <button
-                  type="submit"
-                  disabled={quickAddLoading}
-                  className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-3 text-sm font-bold text-white shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1.5 cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>{quickAddLoading ? 'Saving...' : 'Save & Add to Cart'}</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={quickAddLoading}
-                  onClick={() => setShowQuickAddModal(false)}
-                  className="rounded-xl border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

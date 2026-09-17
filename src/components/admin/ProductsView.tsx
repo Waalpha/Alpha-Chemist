@@ -3,11 +3,7 @@ import { UserProfile, BusinessConfig, Product, Category } from '../../types';
 import { db, DEFAULT_BUSINESS_ID } from '../../lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { formatCurrency, logAuditAction } from '../../lib/utils';
-import { Package, Plus, Search, Edit2, Trash2, X, AlertCircle, Download, Upload, Layers, CheckCircle2, Sparkles, Check, Barcode, Printer, Maximize2, Copy } from 'lucide-react';
-import { generateBarcode, isBarcodeDuplicate, detectBarcodeFormat, cleanScannedBarcode } from '../../lib/barcodeUtils';
-import { BarcodeDisplay } from '../common/BarcodeDisplay';
-import { BarcodeLabelPrintModal } from '../common/BarcodeLabelPrintModal';
-import { BulkBarcodePrintModal } from '../common/BulkBarcodePrintModal';
+import { Package, Plus, Search, Edit2, Trash2, X, AlertCircle, Download, Upload, Layers, CheckCircle2, Sparkles, Check } from 'lucide-react';
 import { DEFAULT_PHARMACY_CATEGORIES, DEFAULT_PHARMACY_PRODUCTS, seedChemistProducts } from '../../lib/dbSeeder';
 
 interface ProductsViewProps {
@@ -47,13 +43,13 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
 
   const [formData, setFormData] = useState({
     name: '',
-    barcode: '',
     categoryId: '',
     unitType: 'Tablet' as Product['unitType'],
     buyingPrice: 0,
     sellingPrice: 0,
-    openingStock: 0,
-    currentStock: 0,
+    isInventory: true,
+    openingStock: 50,
+    currentStock: 50,
     minStockLevel: 10
   });
   const [error, setError] = useState('');
@@ -365,8 +361,6 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
           cleanRow.push(currentVal.trim().replace(/^"|"$/g, ''));
 
           const name = (nameIdx !== -1 && cleanRow[nameIdx]) ? cleanRow[nameIdx] : `Product ${i}`;
-          const rawBarcode = (barcodeIdx !== -1 && cleanRow[barcodeIdx]) ? cleanRow[barcodeIdx].trim() : '';
-          const barcode = rawBarcode || generateBarcode('EAN-13');
           const categoryId = (catIdIdx !== -1 && cleanRow[catIdIdx]) ? cleanRow[catIdIdx] : categories[0]?.id || 'cat-antibiotics';
           const categoryName = (catNameIdx !== -1 && cleanRow[catNameIdx]) ? cleanRow[catNameIdx] : 'Antibiotics & Anti-Infectives';
           const unitType = (unitIdx !== -1 && cleanRow[unitIdx]) ? cleanRow[unitIdx] as Product['unitType'] : 'Tablet';
@@ -380,7 +374,6 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
           const newProd: Product = {
             id: productId,
             name,
-            barcode,
             categoryId,
             categoryName,
             unitType: chemistUnits.includes(unitType) ? unitType : 'Tablet',
@@ -447,11 +440,11 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
     setEditingProduct(null);
     setFormData({
       name: '',
-      barcode: generateBarcode('EAN-13'),
       categoryId: categories[0]?.id || 'cat-antibiotics',
       unitType: 'Tablet',
       buyingPrice: 150,
       sellingPrice: 250,
+      isInventory: true,
       openingStock: 50,
       currentStock: 50,
       minStockLevel: 10
@@ -464,14 +457,14 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
     setEditingProduct(product);
     setFormData({
       name: product.name,
-      barcode: product.barcode || '',
       categoryId: product.categoryId,
       unitType: product.unitType,
       buyingPrice: product.buyingPrice || 0,
       sellingPrice: product.sellingPrice,
-      openingStock: product.openingStock || 0,
-      currentStock: product.currentStock || 0,
-      minStockLevel: product.minStockLevel
+      isInventory: product.isInventory !== false,
+      openingStock: product.openingStock || 50,
+      currentStock: product.currentStock || 50,
+      minStockLevel: product.minStockLevel || 10
     });
     setError('');
     setIsModalOpen(true);
@@ -484,15 +477,6 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
       return;
     }
 
-    const cleanBarcode = formData.barcode.trim();
-    if (cleanBarcode) {
-      if (isBarcodeDuplicate(products, cleanBarcode, editingProduct?.id)) {
-        const dup = products.find(p => p.barcode === cleanBarcode && p.id !== editingProduct?.id);
-        setError(`Barcode "${cleanBarcode}" is already assigned to "${dup?.name || 'another product'}". Barcodes must be unique.`);
-        return;
-      }
-    }
-
     try {
       const cat = categories.find(c => c.id === formData.categoryId);
       const categoryName = cat ? cat.name : 'General';
@@ -503,15 +487,15 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
         const prodRef = doc(db, 'businesses', DEFAULT_BUSINESS_ID, 'products', editingProduct.id);
         const updatedData: any = {
           name: formData.name.trim(),
-          barcode: cleanBarcode || null,
           categoryId: formData.categoryId,
           categoryName,
           unitType: formData.unitType,
           buyingPrice: Number(formData.buyingPrice),
           sellingPrice: Number(formData.sellingPrice),
-          openingStock: Number(formData.openingStock),
-          currentStock: Number(formData.currentStock),
-          minStockLevel: Number(formData.minStockLevel),
+          isInventory: formData.isInventory,
+          openingStock: formData.isInventory ? Number(formData.openingStock) : 0,
+          currentStock: formData.isInventory ? Number(formData.currentStock) : 0,
+          minStockLevel: formData.isInventory ? Number(formData.minStockLevel) : 0,
           updatedAt: now
         };
         await updateDoc(prodRef, updatedData);
@@ -522,16 +506,16 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
         const newProduct: Product = {
           id: productId,
           name: formData.name.trim(),
-          barcode: cleanBarcode || undefined,
           categoryId: formData.categoryId,
           categoryName,
           unitType: formData.unitType,
           buyingPrice: Number(formData.buyingPrice),
           sellingPrice: Number(formData.sellingPrice),
-          openingStock: Number(formData.openingStock),
-          currentStock: Number(formData.openingStock),
+          isInventory: formData.isInventory,
+          openingStock: formData.isInventory ? Number(formData.openingStock) : 0,
+          currentStock: formData.isInventory ? Number(formData.currentStock) : 0,
           stockAdded: 0,
-          minStockLevel: Number(formData.minStockLevel),
+          minStockLevel: formData.isInventory ? Number(formData.minStockLevel) : 0,
           status: 'active',
           createdAt: now,
           updatedAt: now
@@ -574,47 +558,12 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
   const filteredProducts = products.filter(p => {
     const matchesCat = selectedCategory === 'all' || p.categoryId === selectedCategory;
     const query = searchQuery.toLowerCase().trim();
-    const cleanQ = cleanScannedBarcode(searchQuery).toLowerCase();
     const matchesSearch = !query ||
                           p.name.toLowerCase().includes(query) ||
                           p.categoryName.toLowerCase().includes(query) ||
-                          (p.genericName && p.genericName.toLowerCase().includes(query)) ||
-                          (p.barcode && (p.barcode.toLowerCase().includes(query) || (cleanQ && p.barcode.toLowerCase().includes(cleanQ))));
+                          (p.genericName && p.genericName.toLowerCase().includes(query));
     return matchesCat && matchesSearch;
   });
-
-  // Count products missing a registered barcode
-  const missingBarcodeProducts = products.filter(p => !p.barcode || !p.barcode.trim());
-
-  // Handle batch barcode auto-generation for items missing one
-  const handleAutoAssignMissingBarcodes = async () => {
-    if (missingBarcodeProducts.length === 0) return;
-    setIsAutoAssigningBarcodes(true);
-    try {
-      const updatedProducts = [...products];
-      let assignedCount = 0;
-      for (const prod of missingBarcodeProducts) {
-        const newCode = generateBarcode('EAN-13');
-        const prodRef = doc(db, 'businesses', DEFAULT_BUSINESS_ID, 'products', prod.id);
-        await updateDoc(prodRef, { barcode: newCode }).catch(async () => {
-          await setDoc(prodRef, { barcode: newCode }, { merge: true });
-        });
-        const idx = updatedProducts.findIndex(p => p.id === prod.id);
-        if (idx !== -1) {
-          updatedProducts[idx] = { ...updatedProducts[idx], barcode: newCode };
-        }
-        assignedCount++;
-      }
-      setProducts(updatedProducts);
-      setSeedingSuccessToast(`Generated unique EAN-13 barcodes for ${assignedCount} products!`);
-      setTimeout(() => setSeedingSuccessToast(''), 4500);
-      logAuditAction(user.uid, user.name, 'UPDATE', `Auto-assigned barcodes to ${assignedCount} products`);
-    } catch (e) {
-      console.error("Failed to auto-assign barcodes:", e);
-    } finally {
-      setIsAutoAssigningBarcodes(false);
-    }
-  };
 
   // Toggle selection for a product row
   const handleToggleSelectProduct = (productId: string) => {
@@ -672,20 +621,7 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
             accept=".csv"
             className="hidden"
           />
-          {/* Print All Barcodes Button */}
-          <button
-            onClick={() => handleOpenBulkPrint()}
-            disabled={products.length === 0}
-            className="inline-flex items-center space-x-2 rounded-2xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-3 text-sm font-bold text-white shadow-md shadow-emerald-700/20 transition-all active:scale-95 cursor-pointer"
-            title="Batch print barcodes and shelf tags for catalog"
-          >
-            <Printer className="w-4 h-4 text-emerald-200" />
-            <span>
-              {selectedProductIds.size > 0
-                ? `Print Selected Barcodes (${selectedProductIds.size})`
-                : `Print All Barcodes (${products.length})`}
-            </span>
-          </button>
+
 
           <button
             onClick={() => handleSeedChemistCatalog(false)}
@@ -766,13 +702,7 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => handleOpenBulkPrint(Array.from(selectedProductIds))}
-              className="inline-flex items-center space-x-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-bold text-white shadow-md transition-all active:scale-95 cursor-pointer"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print Barcodes for Selected ({selectedProductIds.size})</span>
-            </button>
+
             <button
               onClick={() => setSelectedProductIds(new Set(filteredProducts.map(p => p.id)))}
               className="inline-flex items-center space-x-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 cursor-pointer"
@@ -790,25 +720,7 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
         </div>
       )}
 
-      {/* Missing Barcodes Quick-Fix Alert */}
-      {missingBarcodeProducts.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-900 shadow-2xs">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>
-              <strong>{missingBarcodeProducts.length}</strong> {missingBarcodeProducts.length === 1 ? 'medicine lacks' : 'medicines lack'} a registered barcode.
-            </span>
-          </div>
-          <button
-            onClick={handleAutoAssignMissingBarcodes}
-            disabled={isAutoAssigningBarcodes}
-            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>{isAutoAssigningBarcodes ? 'Assigning Barcodes...' : 'Auto-Generate Missing Barcodes'}</span>
-          </button>
-        </div>
-      )}
+
 
       {/* Search & Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -916,12 +828,10 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
                     />
                   </th>
                   <th className="p-4">Product Name</th>
-                  <th className="p-4">Barcode</th>
+                  
                   <th className="p-4">Category</th>
                   <th className="p-4">Unit</th>
                   <th className="p-4 text-right">Selling Price</th>
-                  <th className="p-4 text-center">Opening Stock</th>
-                  <th className="p-4 text-center">Current Stock</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -942,31 +852,7 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
                       />
                     </td>
                     <td className="p-4 font-bold text-gray-900">{product.name}</td>
-                    <td className="p-4">
-                      {product.barcode ? (
-                        <div className="flex items-center space-x-2">
-                          <button
-                            type="button"
-                            onClick={() => setEnlargedBarcodeProduct({ name: product.name, barcode: product.barcode! })}
-                            className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-all select-all flex items-center space-x-1.5 cursor-pointer shadow-2xs"
-                            title="Click to view enlarged barcode"
-                          >
-                            <Barcode className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>{product.barcode}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setLabelPrintProduct(product)}
-                            className="text-slate-500 hover:text-emerald-700 p-1.5 rounded-lg hover:bg-emerald-50 transition-all cursor-pointer"
-                            title="Print Barcode Label"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-400 italic">No Barcode</span>
-                      )}
-                    </td>
+                    
                     <td className="p-4">
                       <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
                         {product.categoryName}
@@ -976,16 +862,8 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
                     <td className="p-4 text-right font-black text-emerald-700">
                       {formatCurrency(product.sellingPrice, currency)}
                     </td>
-                    <td className="p-4 text-center font-medium text-gray-700">{product.openingStock}</td>
-                    <td className="p-4 text-center font-bold text-gray-900">{product.currentStock}</td>
                     <td className="p-4 text-right space-x-2">
-                      <button
-                        onClick={() => setLabelPrintProduct(product)}
-                        className="p-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-all cursor-pointer"
-                        title="Print Barcode Label"
-                      >
-                        <Printer className="w-4 h-4" />
-                      </button>
+
                       <button
                         onClick={() => handleOpenEditModal(product)}
                         className="p-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
@@ -1063,7 +941,6 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
                         if (preset) {
                           setFormData({
                             name: preset.name,
-                            barcode: preset.barcode || generateBarcode('EAN-13'),
                             categoryId: preset.categoryId,
                             unitType: preset.unitType,
                             buyingPrice: preset.buyingPrice || 0,
@@ -1094,103 +971,7 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
                 />
               </div>
 
-              {/* Product Barcode Field */}
-              <div className="space-y-2 p-4 rounded-2xl bg-slate-50 border-2 border-slate-200">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-extrabold uppercase tracking-wider text-slate-900 flex items-center space-x-1.5">
-                    <Barcode className="w-4 h-4 text-slate-700" />
-                    <span>Product Barcode (EAN-13 / Code 128)</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const generated = generateBarcode('EAN-13');
-                      setFormData({ ...formData, barcode: generated });
-                    }}
-                    className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 px-3 py-1.5 rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Auto-Generate</span>
-                  </button>
-                </div>
 
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={formData.barcode}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const cleaned = cleanScannedBarcode(val);
-                      setFormData({ ...formData, barcode: cleaned || val.trim() });
-                    }}
-                    placeholder="Scan with barcode scanner or enter code..."
-                    className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 font-mono text-base font-extrabold text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 tracking-wider"
-                  />
-                  {formData.barcode && (
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, barcode: '' })}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                {formData.barcode && (
-                  <div className="mt-2 p-4 bg-white rounded-xl border-2 border-slate-200 flex flex-col items-center space-y-3 shadow-2xs">
-                    <BarcodeDisplay
-                      value={formData.barcode}
-                      height={75}
-                      width={2.2}
-                      fontSize={16}
-                      className="w-full max-w-sm"
-                    />
-
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                      <span className="font-mono text-base font-black text-slate-900 bg-slate-100 px-3.5 py-1 rounded-lg border border-slate-300 tracking-widest select-all">
-                        {formData.barcode}
-                      </span>
-                      <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-900 text-white">
-                        {detectBarcodeFormat(formData.barcode)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setEnlargedBarcodeProduct({ name: formData.name || 'Product Barcode', barcode: formData.barcode })}
-                        className="text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300 px-3 py-1.5 rounded-lg transition-all flex items-center space-x-1.5 cursor-pointer"
-                      >
-                        <Maximize2 className="w-3.5 h-3.5 text-slate-700" />
-                        <span>Enlarge Barcode</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard?.writeText(formData.barcode);
-                          setCopiedBarcode(true);
-                          setTimeout(() => setCopiedBarcode(false), 2000);
-                        }}
-                        className="text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300 px-3 py-1.5 rounded-lg transition-all flex items-center space-x-1.5 cursor-pointer"
-                      >
-                        {copiedBarcode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-700" />}
-                        <span>{copiedBarcode ? 'Copied!' : 'Copy Code'}</span>
-                      </button>
-                    </div>
-
-                    {isBarcodeDuplicate(products, formData.barcode, editingProduct?.id) && (
-                      <p className="text-xs font-bold text-red-600 mt-1 flex items-center space-x-1">
-                        <AlertCircle className="w-3.5 h-3.5" />
-                        <span>Warning: This barcode is already used by another product!</span>
-                      </p>
-                    )}
-                  </div>
-                )}
-                <p className="text-xs font-medium text-slate-600">
-                  Unique barcode within your business. Can be scanned directly from the POS interface.
-                </p>
-              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1261,50 +1042,6 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
                     required
                     value={formData.sellingPrice}
                     onChange={(e) => setFormData({ ...formData, sellingPrice: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-300 p-3 text-sm font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 bg-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-900 mb-1.5">
-                    Opening Stock
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={formData.openingStock}
-                    onChange={(e) => setFormData({ ...formData, openingStock: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-300 p-3 text-sm font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-900 mb-1.5">
-                    Current Stock
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={formData.currentStock}
-                    onChange={(e) => setFormData({ ...formData, currentStock: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-300 p-3 text-sm font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-900 mb-1.5">
-                    Min Threshold
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={formData.minStockLevel}
-                    onChange={(e) => setFormData({ ...formData, minStockLevel: Number(e.target.value) })}
                     className="w-full rounded-xl border border-slate-300 p-3 text-sm font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 bg-white"
                   />
                 </div>
@@ -1614,93 +1351,7 @@ export function ProductsView({ user, businessConfig }: ProductsViewProps) {
         </div>
       )}
 
-      {/* Barcode Label Print Modal */}
-      {labelPrintProduct && (
-        <BarcodeLabelPrintModal
-          isOpen={!!labelPrintProduct}
-          product={labelPrintProduct}
-          businessConfig={businessConfig}
-          onClose={() => setLabelPrintProduct(null)}
-          onSwitchToBulkPrint={() => handleOpenBulkPrint()}
-        />
-      )}
 
-      {/* Bulk Barcode Label Print Modal */}
-      <BulkBarcodePrintModal
-        isOpen={isBulkPrintModalOpen}
-        onClose={() => setIsBulkPrintModalOpen(false)}
-        products={products}
-        initialSelectedIds={bulkPrintInitialIds}
-        categories={categories}
-        businessConfig={businessConfig}
-      />
-
-      {/* Enlarged Barcode Fullscreen / Zoom Modal */}
-      {enlargedBarcodeProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl space-y-6 text-center max-h-[92dvh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div className="flex items-center space-x-2.5 text-left">
-                <div className="p-2 rounded-xl bg-slate-900 text-white">
-                  <Barcode className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 truncate max-w-xs sm:max-w-sm">
-                    {enlargedBarcodeProduct.name}
-                  </h3>
-                  <p className="text-xs font-semibold text-slate-500">High-Contrast Scanner Display</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setEnlargedBarcodeProduct(null)}
-                className="rounded-xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Giant Barcode Display */}
-            <div className="p-6 bg-white rounded-2xl border-4 border-slate-900 shadow-md flex flex-col items-center justify-center">
-              <BarcodeDisplay
-                value={enlargedBarcodeProduct.barcode}
-                width={2.6}
-                height={110}
-                fontSize={20}
-                className="w-full"
-              />
-              <div className="mt-4 font-mono text-xl sm:text-2xl font-black text-slate-900 tracking-widest bg-slate-100 px-6 py-2 rounded-xl border-2 border-slate-300 select-all">
-                {enlargedBarcodeProduct.barcode}
-              </div>
-              <div className="mt-2 text-xs font-bold text-slate-600 uppercase tracking-wider">
-                Format: {detectBarcodeFormat(enlargedBarcodeProduct.barcode)}
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard?.writeText(enlargedBarcodeProduct.barcode);
-                  setCopiedBarcode(true);
-                  setTimeout(() => setCopiedBarcode(false), 2000);
-                }}
-                className="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all flex items-center space-x-2 shadow-xs cursor-pointer"
-              >
-                {copiedBarcode ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-600" />}
-                <span>{copiedBarcode ? 'Copied to Clipboard!' : 'Copy Barcode'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setEnlargedBarcodeProduct(null)}
-                className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
-              >
-                Close Preview
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -38,16 +38,16 @@ export interface Product {
   name: string;
   genericName?: string;
   dosage?: string;
-  barcode?: string;
   categoryId: string;
   categoryName: string;
   unitType: 'Tablet' | 'Capsule' | 'Strip' | 'Blister Pack' | 'Bottle' | 'Syrup (100ml)' | 'Syrup (200ml)' | 'Box' | 'Tube' | 'Sachet' | 'Vial' | 'Ampoule' | 'Roll' | 'Piece' | 'Pack' | 'Dose' | string;
   buyingPrice?: number;
   sellingPrice: number;
-  openingStock: number;
-  currentStock: number;
-  stockAdded: number; // accumulated added stock during day
-  minStockLevel: number;
+  isInventory?: boolean; // true = inventory item, false = non-inventory item
+  openingStock?: number;
+  currentStock?: number;
+  stockAdded?: number; // accumulated added stock during day
+  minStockLevel?: number;
   prescriptionRequired?: boolean;
   batchNumber?: string;
   expiryDate?: string;
@@ -59,7 +59,6 @@ export interface Product {
 export interface SaleItem {
   productId: string;
   productName: string;
-  barcode?: string;
   quantity: number;
   unitPrice: number;
   totalAmount: number;
